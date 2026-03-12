@@ -1,0 +1,41 @@
+CREATE TABLE Users (
+    Id INT IDENTITY(1,1) PRIMARY KEY,
+    
+    Email NVARCHAR(255) NOT NULL UNIQUE,
+    Password NVARCHAR(255) NOT NULL,
+
+    CreatedAt DATETIME2 NOT NULL DEFAULT GETDATE(),
+    UpdatedAt DATETIME2 NOT NULL DEFAULT GETDATE()
+);
+
+CREATE TABLE Notes (
+    Id INT IDENTITY(1,1) PRIMARY KEY,
+
+    Title NVARCHAR(255) NOT NULL,
+    Content NVARCHAR(MAX) NULL,
+
+    CreatedAt DATETIME2 NOT NULL DEFAULT GETDATE(),
+    UpdatedAt DATETIME2 NOT NULL DEFAULT GETDATE(),
+
+    UserId INT NOT NULL,
+
+    CONSTRAINT FK_Notes_User
+        FOREIGN KEY (UserId)
+        REFERENCES Users(Id)
+        ON DELETE CASCADE
+);
+
+
+CREATE TRIGGER trg_UpdateNotesTimestamp
+ON Notes
+AFTER UPDATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    UPDATE n
+    SET UpdatedAt = GETDATE()
+    FROM Notes n
+    INNER JOIN inserted i
+        ON n.Id = i.Id;
+END;
