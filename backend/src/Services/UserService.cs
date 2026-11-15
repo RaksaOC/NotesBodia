@@ -24,9 +24,9 @@ public class UserService
         var sql = $@"
 INSERT INTO {Tables.Users.TableName}
     ({Tables.Users.Cols.Email}, {Tables.Users.Cols.Password}, {Tables.Users.Cols.CreatedAt}, {Tables.Users.Cols.UpdatedAt})
-OUTPUT INSERTED.*
 VALUES
-    (@Email, @Password, @CreatedAt, @UpdatedAt);";
+    (@Email, @Password, @CreatedAt, @UpdatedAt)
+RETURNING *;";
 
         return await conn.QuerySingleAsync<User>(sql, new
         {

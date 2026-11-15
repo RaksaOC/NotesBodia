@@ -1,37 +1,25 @@
 /*
-  Seed data for local/dev SQL Server.
+  Seed data for local/dev PostgreSQL.
 
   - Creates a demo user (if not already present)
-  - Inserts a few notes for that user
+  - Inserts a few notes for that user (if they have none)
 
   Test credentials (see README):
     email: demo@notesbodia.local
     password: TestPassword123!
 */
 
-SET NOCOUNT ON;
+INSERT INTO Users (Email, Password)
+VALUES ('demo@notesbodia.local', '$2y$12$QF682PHfbywoMI7QS4IQK.vWqqcvEx8PojqkohECpyGA0.LS.CWLy')
+ON CONFLICT (Email) DO NOTHING;
 
-DECLARE @Email NVARCHAR(255) = 'demo@notesbodia.local';
-DECLARE @PasswordHash NVARCHAR(255) = '$2y$12$QF682PHfbywoMI7QS4IQK.vWqqcvEx8PojqkohECpyGA0.LS.CWLy';
-DECLARE @UserId INT;
-
--- Ensure demo user exists
-SELECT @UserId = Id FROM Users WHERE Email = @Email;
-
-IF @UserId IS NULL
-BEGIN
-  INSERT INTO Users (Email, Password, CreatedAt, UpdatedAt)
-  VALUES (@Email, @PasswordHash, SYSUTCDATETIME(), SYSUTCDATETIME());
-
-  SET @UserId = SCOPE_IDENTITY();
-END
-
--- Seed notes if user has none
-IF NOT EXISTS (SELECT 1 FROM Notes WHERE UserId = @UserId)
-BEGIN
-  INSERT INTO Notes (Title, Content, CreatedAt, UpdatedAt, UserId)
-  VALUES
-    ('Welcome to Notesbodia', 'This is a seeded note created by DML.sql. You can edit or delete it.', SYSUTCDATETIME(), SYSUTCDATETIME(), @UserId),
-    ('Markdown-ish content', 'Try storing: - lists\n- quick thoughts\n- and snippets', SYSUTCDATETIME(), SYSUTCDATETIME(), @UserId),
-    ('Search me', 'Use the search box to filter notes by title.', SYSUTCDATETIME(), SYSUTCDATETIME(), @UserId);
-END
+INSERT INTO Notes (Title, Content, UserId)
+SELECT v.Title, v.Content, u.Id
+FROM Users u
+CROSS JOIN (VALUES
+    ('Welcome to Notesbodia', 'This is a seeded note created by DML.sql. You can edit or delete it.'),
+    ('Markdown-ish content', E'Try storing: - lists\n- quick thoughts\n- and snippets'),
+    ('Search me', 'Use the search box to filter notes by title.')
+) AS v(Title, Content)
+WHERE u.Email = 'demo@notesbodia.local'
+  AND NOT EXISTS (SELECT 1 FROM Notes n WHERE n.UserId = u.Id);

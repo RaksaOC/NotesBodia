@@ -1,41 +1,35 @@
-CREATE TABLE Users (
-    Id INT IDENTITY(1,1) PRIMARY KEY,
-    
-    Email NVARCHAR(255) NOT NULL UNIQUE,
-    Password NVARCHAR(255) NOT NULL,
+-- PostgreSQL schema for Notesbodia (safe to run repeatedly).
+-- Unquoted identifiers are stored lowercase; Dapper maps them case-insensitively.
 
-    CreatedAt DATETIME2 NOT NULL DEFAULT GETDATE(),
-    UpdatedAt DATETIME2 NOT NULL DEFAULT GETDATE()
+CREATE TABLE IF NOT EXISTS Users (
+    Id        INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    Email     VARCHAR(255) NOT NULL UNIQUE,
+    Password  VARCHAR(255) NOT NULL,
+    CreatedAt TIMESTAMPTZ  NOT NULL DEFAULT now(),
+    UpdatedAt TIMESTAMPTZ  NOT NULL DEFAULT now()
 );
 
-CREATE TABLE Notes (
-    Id INT IDENTITY(1,1) PRIMARY KEY,
-
-    Title NVARCHAR(255) NOT NULL,
-    Content NVARCHAR(MAX) NULL,
-
-    CreatedAt DATETIME2 NOT NULL DEFAULT GETDATE(),
-    UpdatedAt DATETIME2 NOT NULL DEFAULT GETDATE(),
-
-    UserId INT NOT NULL,
-
-    CONSTRAINT FK_Notes_User
-        FOREIGN KEY (UserId)
-        REFERENCES Users(Id)
-        ON DELETE CASCADE
+CREATE TABLE IF NOT EXISTS Notes (
+    Id        INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    Title     VARCHAR(255) NOT NULL,
+    Content   TEXT NULL,
+    CreatedAt TIMESTAMPTZ  NOT NULL DEFAULT now(),
+    UpdatedAt TIMESTAMPTZ  NOT NULL DEFAULT now(),
+    UserId    INT NOT NULL,
+    CONSTRAINT FK_Notes_User FOREIGN KEY (UserId) REFERENCES Users(Id) ON DELETE CASCADE
 );
 
+CREATE INDEX IF NOT EXISTS IX_Notes_UserId ON Notes (UserId);
 
-CREATE TRIGGER trg_UpdateNotesTimestamp
-ON Notes
-AFTER UPDATE
-AS
+-- keep UpdatedAt current on every update
+CREATE OR REPLACE FUNCTION set_updated_at() RETURNS trigger AS $$
 BEGIN
-    SET NOCOUNT ON;
-
-    UPDATE n
-    SET UpdatedAt = GETDATE()
-    FROM Notes n
-    INNER JOIN inserted i
-        ON n.Id = i.Id;
+    NEW.UpdatedAt := now();
+    RETURN NEW;
 END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_UpdateNotesTimestamp ON Notes;
+CREATE TRIGGER trg_UpdateNotesTimestamp
+    BEFORE UPDATE ON Notes
+    FOR EACH ROW EXECUTE FUNCTION set_updated_at();

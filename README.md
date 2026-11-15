@@ -8,8 +8,8 @@ A simple notes app with email/password auth and CRUD notes.
 - **Backend**: ASP.NET Core Web API (.NET 9). Uses:
   - **JWT Bearer auth** for protected endpoints
   - **BCrypt** for password hashing
-  - **Dapper + Microsoft.Data.SqlClient** for SQL Server access
-- **Database**: SQL Server with two tables:
+  - **Dapper + Npgsql** for PostgreSQL access
+- **Database**: PostgreSQL with two tables:
   - `Users` (Id, Email, Password, timestamps)
   - `Notes` (belongs to `Users` via `UserId` FK, timestamps)
 
@@ -29,12 +29,11 @@ frontend/  Vue 3 app (Vite + TS)
 
 - **Node.js**: `>= 20.19` (or `>= 22.12`)
 - **.NET SDK**: `9.x`
-- **SQL Server**: local instance, Docker, or hosted (Azure SQL also works)
+- **PostgreSQL** 14+: local instance, Docker (`docker run -e POSTGRES_PASSWORD=dev -p 5432:5432 postgres:16-alpine`), or hosted
 
 ### Database setup
 
-1) Create the schema by running:
-- `backend/src/Database/sql/DDL.sql`
+1) The API creates the schema automatically on startup (`backend/src/Database/sql/DDL.sql`, safe to re-run).
 
 2) (Optional) Seed demo data:
 - `backend/src/Database/sql/DML.sql`
@@ -44,8 +43,9 @@ frontend/  Vue 3 app (Vite + TS)
 The API reads settings from `appsettings.json` + `appsettings.Development.json` (when `ASPNETCORE_ENVIRONMENT=Development`).
 
 Configure:
-- **Connection string**: `ConnectionStrings:DefaultConnection`
-- **JWT secret**: `Jwt:Key`
+- **Connection string**: `ConnectionStrings:DefaultConnection`, e.g. `Host=localhost;Port=5432;Database=notesbodia;Username=postgres;Password=dev`
+  (env var form: `ConnectionStrings__DefaultConnection`)
+- **JWT secret**: `Jwt:Key` (env var form: `Jwt__Key`)
 
 Run the API:
 

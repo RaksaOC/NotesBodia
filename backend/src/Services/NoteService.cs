@@ -16,7 +16,8 @@ public class NoteService
         var sql = $"SELECT * FROM {Tables.Notes.TableName} WHERE {Tables.Notes.Cols.UserId} = @UserId";
         if (!string.IsNullOrWhiteSpace(search))
         {
-            sql += $" AND {Tables.Notes.Cols.Title} LIKE '%{search}%'";
+            // parameterised (was string-concatenated -> SQL injection), case-insensitive
+            sql += $" AND {Tables.Notes.Cols.Title} ILIKE @Search";
         }
         if (filter == FilterOptions.Latest)
         {
@@ -35,7 +36,7 @@ public class NoteService
             sql += $" ORDER BY {Tables.Notes.Cols.Title} ASC";
         }
         using var conn = _factory.CreateConnection();
-        var notes = await conn.QueryAsync<Note>(sql, new { UserId = userId });
+        var notes = await conn.QueryAsync<Note>(sql, new { UserId = userId, Search = $"%{search}%" });
 
         // cut down content because this api is used at the sidebar whcih just shows a snippet and cut down payload size
         // since theres also no pagination 
@@ -67,8 +68,8 @@ public class NoteService
     {
         var sql = $@"
 INSERT INTO {Tables.Notes.TableName} ({Tables.Notes.Cols.Title}, {Tables.Notes.Cols.Content}, {Tables.Notes.Cols.UserId})
-OUTPUT INSERTED.*
-VALUES (@Title, @Content, @UserId);";
+VALUES (@Title, @Content, @UserId)
+RETURNING *;";
 
         using var conn = _factory.CreateConnection();
         return await conn.QuerySingleAsync<Note>(sql, new { Title = note.Title, Content = note.Content, UserId = userId });
@@ -109,11 +110,8 @@ VALUES (@Title, @Content, @UserId);";
         var sql = $@"
 UPDATE {Tables.Notes.TableName}
 SET {setClause}
-WHERE {Tables.Notes.Cols.Id} = @Id AND {Tables.Notes.Cols.UserId} = @UserId;
-
-SELECT *
-FROM {Tables.Notes.TableName}
-WHERE {Tables.Notes.Cols.Id} = @Id AND {Tables.Notes.Cols.UserId} = @UserId;
+WHERE {Tables.Notes.Cols.Id} = @Id AND {Tables.Notes.Cols.UserId} = @UserId
+RETURNING *;
 ";
 
         queryParams.Add("UserId", userId);

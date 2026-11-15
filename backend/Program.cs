@@ -55,6 +55,9 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 var app = builder.Build();
 
+// create the Postgres schema on first start
+await app.Services.GetRequiredService<DbConnectionFactory>().EnsureSchemaAsync();
+
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
